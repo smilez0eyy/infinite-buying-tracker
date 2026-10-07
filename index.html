@@ -233,7 +233,23 @@ let currentTab = (function(){
   return 'plan';
 })();
 let addKind = 'buy'; // 기록추가 탭에서 매수/매도 선택 상태
-function setAddKind(k){ addKind = k; render(); }
+// 기록추가 입력 중인 값(임시 저장). 매수↔매도 전환이나 다른 탭 이동 시에도 유지됨
+let addDraft = { date:'', price:'', qty:'', fee:'0', dropFlag:false, sellKind:'quarter' };
+function captureAddDraft(){
+  // 지금 화면에 떠 있는 입력칸(매수 또는 매도)의 값을 읽어서 저장
+  const k = addKind; // 'buy' 또는 'sell'
+  const g = id => document.getElementById(id);
+  if(!g(k+'Price')) return; // 기록추가 화면이 아니면 아무것도 안 함
+  addDraft.date  = g(k+'Date') ? g(k+'Date').value : addDraft.date;
+  addDraft.price = g(k+'Price').value;
+  addDraft.qty   = g(k+'Qty').value;
+  addDraft.fee   = g(k+'Fee').value;
+  if(g('buyFlagDrop')) addDraft.dropFlag = g('buyFlagDrop').checked;
+  const sk = document.querySelector('#segSellKind .active');
+  if(sk) addDraft.sellKind = sk.dataset.v;
+}
+function resetAddDraft(){ addDraft = { date:'', price:'', qty:'', fee:'0', dropFlag:false, sellKind:'quarter' }; }
+function setAddKind(k){ captureAddDraft(); addKind = k; render(); }
 
 async function initCloud(){
   // Vercel 환경에서는 localStorage만 사용 (claude 객체 없음)
@@ -432,11 +448,15 @@ function renderInner(){
   const eng = computeEngine();
   if(currentTab==='dash'){ app.innerHTML = dashView(eng); }
   else if(currentTab==='plan') app.innerHTML = planView(eng);
-  else if(currentTab==='add') app.innerHTML = addView(eng);
+  else if(currentTab==='add'){
+    app.innerHTML = addView(eng);
+    // 이어서 입력하는 값이 있으면 정산금액 미리보기도 바로 다시 계산
+    try{ if(addKind==='buy') updateBuyPreview(); else updateSellPreview(eng ? eng.avgPrice : 0); }catch(err){}
+  }
   else if(currentTab==='hist') app.innerHTML = histView(eng);
   else if(currentTab==='settle') app.innerHTML = settleView(eng);
 }
-function setTab(t){ currentTab=t; render(); window.scrollTo(0,0); }
+function setTab(t){ captureAddDraft(); currentTab=t; render(); window.scrollTo(0,0); }
 function modeLabel(m){ return m==='v22'?'V2.2':(m==='v4'?'V4.0':'V3.0'); }
 
 /* ---------- Setup ---------- */
@@ -867,7 +887,9 @@ function getDateSelectValue(prefix){
   return document.getElementById(prefix+'Date').value;
 }
 function addView(e){
-  const today = new Date().toISOString().slice(0,10);
+  const today = addDraft.date || new Date().toISOString().slice(0,10);
+  const esc = v => String(v==null?'':v).replace(/"/g,'&quot;');
+  const dP = esc(addDraft.price), dQ = esc(addDraft.qty), dF = esc(addDraft.fee===''?'':addDraft.fee);
   const avgPrice = e ? e.avgPrice : 0;
   const buyCard = `
   <div class="card">
@@ -876,11 +898,11 @@ function addView(e){
       <label>날짜</label>
       ${dateSelectHtml('buy', today)}
     </div>
-    <div class="field"><label>체결단가</label><input type="number" id="buyPrice" placeholder="$" inputmode="decimal" oninput="updateBuyPreview()"></div>
-    <div class="field"><label>수량</label><input type="number" id="buyQty" placeholder="주" inputmode="numeric" step="1" oninput="updateBuyPreview()"></div>
-    <div class="field"><label>매수 수수료</label><input type="number" id="buyFee" placeholder="$0" inputmode="decimal" value="0" oninput="updateBuyPreview()"></div>
+    <div class="field"><label>체결단가</label><input type="number" id="buyPrice" placeholder="$" inputmode="decimal" value="${dP}" oninput="updateBuyPreview()"></div>
+    <div class="field"><label>수량</label><input type="number" id="buyQty" placeholder="주" inputmode="numeric" step="1" value="${dQ}" oninput="updateBuyPreview()"></div>
+    <div class="field"><label>매수 수수료</label><input type="number" id="buyFee" placeholder="$0" inputmode="decimal" value="${dF}" oninput="updateBuyPreview()"></div>
     <div class="settlebox"><span class="l">매수 정산금액</span><span class="v mono" id="buySettle">$0.00</span></div>
-    ${S.setup.mode==='v4' ? `<div class="checkline"><input type="checkbox" id="buyFlagDrop"><label for="buyFlagDrop">지정가매도 직후 하락해서 발생한 매수</label></div>` : ''}
+    ${S.setup.mode==='v4' ? `<div class="checkline"><input type="checkbox" id="buyFlagDrop" ${addDraft.dropFlag?'checked':''}><label for="buyFlagDrop">지정가매도 직후 하락해서 발생한 매수</label></div>` : ''}
     <button class="btn buy" style="margin-top:12px" onclick="submitBuy()">매수 기록 추가</button>
   </div>`;
   const sellCard = `
@@ -890,15 +912,15 @@ function addView(e){
       <label>날짜</label>
       ${dateSelectHtml('sell', today)}
     </div>
-    <div class="field"><label>체결단가</label><input type="number" id="sellPrice" placeholder="$" inputmode="decimal" oninput="updateSellPreview(${avgPrice})"></div>
-    <div class="field"><label>수량</label><input type="number" id="sellQty" placeholder="주" inputmode="numeric" step="1" oninput="updateSellPreview(${avgPrice})"></div>
-    <div class="field"><label>매도 수수료</label><input type="number" id="sellFee" placeholder="$0" inputmode="decimal" value="0" oninput="updateSellPreview(${avgPrice})"></div>
+    <div class="field"><label>체결단가</label><input type="number" id="sellPrice" placeholder="$" inputmode="decimal" value="${dP}" oninput="updateSellPreview(${avgPrice})"></div>
+    <div class="field"><label>수량</label><input type="number" id="sellQty" placeholder="주" inputmode="numeric" step="1" value="${dQ}" oninput="updateSellPreview(${avgPrice})"></div>
+    <div class="field"><label>매도 수수료</label><input type="number" id="sellFee" placeholder="$0" inputmode="decimal" value="${dF}" oninput="updateSellPreview(${avgPrice})"></div>
     <div class="settlebox"><span class="l">매도 정산금액</span><span class="v mono" id="sellSettle">$0.00</span></div>
     <div class="settlebox"><span class="l">예상 실현손익 (현재 평단 $${fmt(avgPrice)} 대비)</span><span class="v mono" id="sellPnl">$0.00</span></div>
     ${(S.setup.mode==='v4') ? `<div class="field"><label>종류</label>
       <div class="seg" id="segSellKind">
-        <button data-v="quarter" class="active" onclick="pickSeg('segSellKind',this)">쿼터매도(1/4)</button>
-        <button data-v="limit" onclick="pickSeg('segSellKind',this)">지정가매도(3/4)</button>
+        <button data-v="quarter" class="${addDraft.sellKind!=='limit'?'active':''}" onclick="pickSeg('segSellKind',this)">쿼터매도(1/4)</button>
+        <button data-v="limit" class="${addDraft.sellKind==='limit'?'active':''}" onclick="pickSeg('segSellKind',this)">지정가매도(3/4)</button>
       </div></div>` : ''}
     <button class="btn sell" style="margin-top:12px" onclick="submitSell(${avgPrice})">매도 기록 추가</button>
   </div>`;
@@ -934,7 +956,7 @@ function submitBuy(){
   const flags = {};
   if(S.setup.mode==='v4'){ flags.postSellDrop = document.getElementById('buyFlagDrop').checked; }
   S.trades = [...S.trades, { id:uid(), ts:new Date(date).getTime()+Math.random(), type:'buy', price, qty, fee, flags }];
-  saveState(); currentTab='plan'; render();
+  resetAddDraft(); saveState(); currentTab='plan'; render();
 }
 function submitSell(){
   const date = getDateSelectValue('sell');
@@ -947,7 +969,7 @@ function submitSell(){
     flags.quarterSell = document.querySelector('#segSellKind .active').dataset.v === 'quarter';
   }
   S.trades = [...S.trades, { id:uid(), ts:new Date(date).getTime()+Math.random(), type:'sell', price, qty, fee, flags }];
-  saveState(); currentTab='plan'; render();
+  resetAddDraft(); saveState(); currentTab='plan'; render();
 }
 
 /* ---------- History ---------- */
