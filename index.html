@@ -108,6 +108,8 @@
     max-width:496px; margin:0 auto;
     box-shadow:0 8px 28px rgba(0,0,0,0.28);
   }
+  /* 키보드가 열려 있는 동안(입력칸 포커스 중)에는 플로팅 탭바 숨김 → 기록 추가 버튼 오터치 방지 */
+  body.kb-open .tabbar{ display:none !important; }
   .tabbar .row{ max-width:520px; margin:0 auto; display:flex; }
   .tabbar button{ flex:1; background:none; border:none; padding:10px 0 9px; color:var(--text-dim); font-family:inherit; cursor:pointer;}
   .tabbar button .ic{ font-size:18px; display:block; }
@@ -1126,6 +1128,32 @@ function runPendingConfirm(){
 render();
 initCloud();
 checkUndoSnapshotAfterReload();
+</script>
+<script>
+/* ---------- 키보드 열림 감지: 입력 중에는 탭바 숨기기 ---------- */
+(function(){
+  var hideTimer=null;
+  function isField(el){
+    if(!el) return false;
+    var t=(el.tagName||'').toUpperCase();
+    if(t==='TEXTAREA'||t==='SELECT') return true;
+    if(t==='INPUT'){
+      var ty=(el.type||'').toLowerCase();
+      return ['button','submit','checkbox','radio','range','color','file','reset'].indexOf(ty)===-1;
+    }
+    return el.isContentEditable===true;
+  }
+  document.addEventListener('focusin', function(e){
+    if(isField(e.target)){ clearTimeout(hideTimer); document.body.classList.add('kb-open'); }
+  });
+  document.addEventListener('focusout', function(){
+    clearTimeout(hideTimer);
+    // 다른 입력칸으로 옮겨가는 경우·키보드가 내려가는 동안 탭바가 갑자기 나타나 버튼을 가리지 않도록 잠시 기다림
+    hideTimer=setTimeout(function(){
+      if(!isField(document.activeElement)) document.body.classList.remove('kb-open');
+    }, 300);
+  });
+})();
 </script>
 </body>
 </html>
