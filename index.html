@@ -182,10 +182,18 @@ function showBootError(msg){
   el.textContent = String(msg);
 }
 window.addEventListener('error', function(ev){
-  showBootError('오류: ' + (ev && ev.message) + (ev && ev.filename ? ' ('+ev.filename+':'+ev.lineno+')' : ''));
+  // 외부 스크립트(fonts 등) 오류는 무시 (Script error / cross-origin)
+  if(!ev || !ev.message || ev.message === 'Script error.' || ev.message === 'Script error') return;
+  // 외부 파일에서 발생한 오류는 무시
+  if(ev.filename && !ev.filename.includes(location.hostname)) return;
+  showBootError('오류: ' + ev.message + (ev.filename ? ' ('+ev.filename+':'+ev.lineno+')' : ''));
 });
 window.addEventListener('unhandledrejection', function(ev){
-  showBootError('비동기 오류: ' + (ev && ev.reason && (ev.reason.message||ev.reason)));
+  if(!ev || !ev.reason) return;
+  const msg = ev.reason && (ev.reason.message || String(ev.reason));
+  // 폰트/외부 리소스 오류 무시
+  if(!msg || msg.includes('font') || msg.includes('Failed to fetch') && !msg.includes('quote')) return;
+  showBootError('비동기 오류: ' + msg);
 });
 </script>
 <script>
@@ -224,31 +232,8 @@ let addKind = 'buy'; // 기록추가 탭에서 매수/매도 선택 상태
 function setAddKind(k){ addKind = k; render(); }
 
 async function initCloud(){
-  try{
-    if(typeof claude==='undefined' || !claude.use) return;
-    const db = await claude.use('db');
-    const user = await claude.use('user');
-    if(!db || !user) return;
-    const uid = await user.id();
-    if(!uid) return;
-    cloudDoc = db.doc(`data/users/${uid}/state`);
-    if(S && S.setup){
-      // local already has data (the normal case — including right after our own edit/reset,
-      // which reloads the page and re-reads localStorage before this ever runs). Local always
-      // wins here: never let a cloud fetch overwrite it, just keep the cloud copy in sync.
-      await cloudDoc.set(JSON.parse(JSON.stringify(S)));
-      return;
-    }
-    // local has nothing (e.g. storage was cleared on this device/browser) — recover from cloud,
-    // unless the user has already started acting locally (e.g. filling in a new setup) in the meantime.
-    const snap = await cloudDoc.get();
-    if(userActed) return;
-    if(snap.exists && snap.data() && snap.data().setup){
-      S = JSON.parse(JSON.stringify(snap.data()));
-      saveLocal();
-      render();
-    }
-  }catch(e){ console.warn('cloud init fail', e); }
+  // Vercel 환경에서는 localStorage만 사용 (claude 객체 없음)
+  cloudDoc = null;
 }
 
 /* ============================= HELPERS ============================= */
