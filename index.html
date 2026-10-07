@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>무한매수법 트래커</title>
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="무한매수법">
+<link rel="apple-touch-icon" sizes="180x180" href="/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FBFAF8; --bg-elev:#FFFFFF; --bg-elev2:#F1EBFC;
+    --line:#E6E2DA; --text:#242220; --text-dim:#837E76;
+    --accent:#8B5CF6; --accent2:#6D4FE0; --accent-soft:#F0EAFB;
+    --up:#C5382E; --up-soft:#F7E2DF;
+    --down:#1F7A54; --down-soft:#DCEEE4;
+    --buy:#C5382E; --buy-soft:#F7E2DF;
+    --sell:#2F6FCF; --sell-soft:#E2ECFB;
+    --radius:14px;
+  }
+  :root:not([data-theme="light"]) { }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#FBFAF8; --bg-elev:#FFFFFF; --bg-elev2:#F1EBFC;
+      --line:#E6E2DA; --text:#242220; --text-dim:#837E76;
+      --accent:#8B5CF6; --accent2:#6D4FE0; --accent-soft:#F0EAFB;
+      --up:#C5382E; --up-soft:#F7E2DF;
+      --down:#1F7A54; --down-soft:#DCEEE4;
+      --buy:#C5382E; --buy-soft:#F7E2DF;
+      --sell:#2F6FCF; --sell-soft:#E2ECFB;
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#FBFAF8; --bg-elev:#FFFFFF; --bg-elev2:#F1EBFC;
+    --line:#E6E2DA; --text:#242220; --text-dim:#837E76;
+    --accent:#8B5CF6; --accent2:#6D4FE0; --accent-soft:#F0EAFB;
+    --up:#C5382E; --up-soft:#F7E2DF;
+    --down:#1F7A54; --down-soft:#DCEEE4;
+    --buy:#C5382E; --buy-soft:#F7E2DF;
+    --sell:#2F6FCF; --sell-soft:#E2ECFB;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'Space Grotesk',system-ui,sans-serif;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+    -webkit-font-smoothing:antialiased;
+  }
+  html{ scroll-padding-top:env(safe-area-inset-top,0px); }
+  .mono{ font-family:'IBM Plex Mono',monospace; }
+  .wrap{ max-width:520px; margin:0 auto; padding:0 16px 112px; }
+  header.top{
+    position:sticky; top:0; z-index:20;
+    padding-top:calc(14px + env(safe-area-inset-top,0px));
+    padding-bottom:14px; background:var(--bg);
+    border-bottom:1px solid var(--line);
+  }
+  header.top .row{ display:flex; align-items:center; justify-content:space-between; max-width:520px; margin:0 auto; padding:0 16px;}
+  header.top h1{ font-size:17px; font-weight:700; margin:0; letter-spacing:-0.01em;}
+  header.top .sub{ font-size:12px; color:var(--text-dim); margin-top:2px;}
+  .iconbtn{ background:none; border:1px solid var(--line); color:var(--text-dim); width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:16px; cursor:pointer; -webkit-touch-callout:none; -webkit-user-select:none; -webkit-tap-highlight-color:transparent;}
+  .iconbtn:active{ transform:scale(0.95); }
+
+  .card{ background:var(--bg-elev); border:1px solid var(--line); border-radius:var(--radius); padding:16px; margin-top:12px; }
+  .card h2{ font-size:13px; font-weight:600; color:var(--text-dim); margin:0 0 10px; }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .stat{ background:var(--bg-elev2); border-radius:10px; padding:10px 12px; }
+  .stat .l{ font-size:11px; color:var(--text-dim); margin-bottom:3px; }
+  .stat .v{ font-size:17px; font-weight:600; }
+  .stat .v.mono{ font-size:16px; }
+  .up{ color:var(--up); } .down{ color:var(--down); }
+  .pnl-pos{ color:var(--up); } .pnl-neg{ color:var(--sell); }
+
+  .field{ margin-bottom:12px; }
+  .field label{ display:block; font-size:12px; color:var(--text-dim); margin-bottom:6px; }
+  .field input, .field select{
+    width:100%; background:var(--bg-elev2); border:1px solid var(--line); color:var(--text);
+    padding:11px 12px; border-radius:10px; font-size:16px; font-family:inherit;
+  }
+  .datebtn{ position:relative; overflow:hidden; width:100%; background:var(--bg-elev2); border:1px solid var(--line); color:var(--text); padding:11px 12px; border-radius:10px; font-size:16px; }
+  .datebtn input{ position:absolute; inset:0; width:100%; height:100%; opacity:0; border:none; padding:0; margin:0; }
+  .settlebox{ background:var(--bg-elev2); border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center; margin-top:2px; }
+  .settlebox .l{ font-size:12.5px; color:var(--text-dim); }
+  .settlebox .v{ font-weight:600; }
+  .seg{ display:flex; gap:6px; background:var(--bg-elev2); padding:4px; border-radius:10px; }
+  .seg button{ flex:1; padding:9px 4px; border:none; background:none; color:var(--text-dim); border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit;}
+  .seg button.active{ background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; }
+  .btn{ width:100%; padding:13px; border-radius:11px; border:none; font-weight:700; font-size:14.5px; cursor:pointer; font-family:inherit; }
+  .btn.primary{ background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; }
+  .btn.ghost{ background:var(--bg-elev2); color:var(--text); border:1px solid var(--line); }
+  .btn.buy{ background:var(--buy-soft); color:var(--buy); }
+  .btn.sell{ background:var(--sell-soft); color:var(--sell); }
+  .btn:active{ transform:scale(0.98); }
+  .btnrow{ display:flex; gap:8px; margin-top:12px; }
+  .btnrow .btn{ flex:1; }
+
+  .tabbar{
+    position:fixed; left:12px; right:12px; bottom:calc(14px + env(safe-area-inset-bottom,0px)); z-index:30;
+    background:var(--bg-elev); border:1px solid var(--line); border-radius:16px;
+    max-width:496px; margin:0 auto;
+    box-shadow:0 8px 28px rgba(0,0,0,0.28);
+  }
+  .tabbar .row{ max-width:520px; margin:0 auto; display:flex; }
+  .tabbar button{ flex:1; background:none; border:none; padding:10px 0 9px; color:var(--text-dim); font-family:inherit; cursor:pointer;}
+  .tabbar button .ic{ font-size:18px; display:block; }
+  .tabbar button .tx{ font-size:10.5px; margin-top:2px; }
+  .tabbar button.active{ color:var(--accent); }
+
+  .order-row{ display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--line); font-size:13.5px;}
+  .order-row:last-child{ border-bottom:none; }
+  .tag{ font-size:10.5px; padding:2px 8px; border-radius:999px; font-weight:600; }
+  .tag.loc{ background:var(--accent-soft); color:var(--accent); }
+  .tag.limit{ background:var(--down-soft); color:var(--down); }
+  .tag.moc{ background:var(--up-soft); color:var(--up); }
+  .tag.buy{ background:var(--buy-soft); color:var(--buy); }
+  .tag.sell{ background:var(--sell-soft); color:var(--sell); }
+
+  .trade-item{ display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); }
+  .trade-item:last-child{ border-bottom:none; }
+  .trade-item .meta{ font-size:11.5px; color:var(--text-dim); margin-top:2px; }
+  .del{ background:none; border:none; color:var(--text-dim); font-size:13px; cursor:pointer; padding:6px; }
+
+  .empty{ text-align:center; color:var(--text-dim); font-size:13px; padding:30px 10px; }
+  .banner{ background:var(--accent-soft); color:var(--accent); border-radius:10px; padding:10px 12px; font-size:12.5px; margin-top:12px; line-height:1.5;}
+  .checkline{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-dim); margin-top:10px;}
+  .modal-bg{ position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:40; display:none; align-items:flex-end; justify-content:center;}
+  .modal-bg.open{ display:flex; }
+  .modal{ background:var(--bg-elev); width:100%; max-width:520px; border-radius:18px 18px 0 0; padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px)); max-height:88vh; overflow-y:auto; }
+  .modal h3{ margin:0 0 14px; font-size:16px; }
+  .divider{ height:1px; background:var(--line); margin:14px 0; }
+  h1,h2,h3{ font-family:'Space Grotesk',sans-serif; }
+  ::selection{ background:var(--accent-soft); }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="row">
+    <div>
+      <h1 id="hdrStock">무한매수법 트래커</h1>
+      <div class="sub" id="hdrSub">종목을 설정해주세요</div>
+    </div>
+    <button class="iconbtn" onclick="openSettings()">⚙︎</button>
+  </div>
+</header>
+
+<div class="wrap" id="app"></div>
+
+<div class="tabbar" id="tabbar" style="display:none;">
+  <div class="row">
+    <button data-tab="dash" onclick="setTab('dash')"><span class="ic">◆</span><span class="tx">현황</span></button>
+    <button data-tab="plan" onclick="setTab('plan')"><span class="ic">▤</span><span class="tx">매매계획</span></button>
+    <button data-tab="add" onclick="setTab('add')"><span class="ic">＋</span><span class="tx">기록추가</span></button>
+    <button data-tab="hist" onclick="setTab('hist')"><span class="ic">≡</span><span class="tx">매매이력</span></button>
+    <button data-tab="settle" onclick="setTab('settle')"><span class="ic">$</span><span class="tx">정산이력</span></button>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalBg" onclick="if(event.target===this) closeModal()">
+  <div class="modal" id="modalBody"></div>
+</div>
+
+<script>
+/* ============================= GLOBAL ERROR SURFACE =============================
+   Catches anything, anywhere, and shows it in a plain DOM banner that does not
+   depend on any other app code (so it still works even if something else is broken).
+=================================================================================== */
+function showBootError(msg){
+  let el = document.getElementById('bootErrorBanner');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'bootErrorBanner';
+    el.style.cssText = 'position:fixed;left:8px;right:8px;bottom:74px;z-index:99999;background:#D64545;color:#fff;padding:10px 12px;border-radius:10px;font-size:11.5px;font-family:monospace;max-height:34vh;overflow:auto;white-space:pre-wrap;box-shadow:0 4px 20px rgba(0,0,0,.4);';
+    document.body.appendChild(el);
+  }
+  el.textContent = String(msg);
+}
+window.addEventListener('error', function(ev){
+  showBootError('오류: ' + (ev && ev.message) + (ev && ev.filename ? ' ('+ev.filename+':'+ev.lineno+')' : ''));
+});
+window.addEventListener('unhandledrejection', function(ev){
+  showBootError('비동기 오류: ' + (ev && ev.reason && (ev.reason.message||ev.reason)));
+});
+</script>
+<script>
+/* ============================= STORAGE ============================= */
+const STORE_KEY = 'infbuy_tracker_v1';
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){ console.warn('load fail', e); }
+  return { setup:null, trades:[], reverseRef:{closes:[], lastClose:null} };
+}
+function saveLocal(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(S)); }catch(e){ console.warn('local save fail', e); }
+}
+function saveState(){
+  userActed = true;
+  saveLocal();
+  if(cloudDoc){
+    cloudDoc.set(JSON.parse(JSON.stringify(S))).catch(e=>console.warn('cloud save fail', e));
+  }
+}
+let S = loadState();
+let cloudDoc = null;
+let userActed = false; // true from the user's very first tap in this session
+document.addEventListener('pointerdown', function(){ userActed = true; }, {capture:true});
+document.addEventListener('touchstart', function(){ userActed = true; }, {capture:true, passive:true});
+let currentTab = (function(){
+  try{
+    const saved = sessionStorage.getItem('infbuy_tab_after_reload');
+    if(saved){ sessionStorage.removeItem('infbuy_tab_after_reload'); return saved; }
+  }catch(e){}
+  return 'plan';
+})();
+let addKind = 'buy'; // 기록추가 탭에서 매수/매도 선택 상태
+function setAddKind(k){ addKind = k; render(); }
+
+async function initCloud(){
+  try{
+    if(typeof claude==='undefined' || !claude.use) return;
+    const db = await claude.use('db');
+    const user = await claude.use('user');
+    if(!db || !user) return;
+    const uid = await user.id();
+    if(!uid) return;
+    cloudDoc = db.doc(`data/users/${uid}/state`);
+    if(S && S.setup){
+      // local already has data (the normal case — including right after our own edit/reset,
+      // which reloads the page and re-reads localStorage before this ever runs). Local always
+      // wins here: never let a cloud fetch overwrite it, just keep the cloud copy in sync.
+      await cloudDoc.set(JSON.parse(JSON.stringify(S)));
+      return;
+    }
+    // local has nothing (e.g. storage was cleared on this device/browser) — recover from cloud,
+    // unless the user has already started acting locally (e.g. filling in a new setup) in the meantime.
+    const snap = await cloudDoc.get();
+    if(userActed) return;
+    if(snap.exists && snap.data() && snap.data().setup){
+      S = JSON.parse(JSON.stringify(snap.data()));
+      saveLocal();
+      render();
+    }
+  }catch(e){ console.warn('cloud init fail', e); }
+}
+
+/* ============================= HELPERS ============================= */
+function fmt(n, d=2){
+  if(n===null||n===undefined||isNaN(n)) return '—';
+  return Number(n).toLocaleString('en-US',{minimumFractionDigits:d, maximumFractionDigits:d});
+}
+function fmtInt(n){ if(n===null||n===undefined||isNaN(n)) return '—'; return Math.round(n).toLocaleString('en-US'); }
+function uid(){ return 't'+Math.random().toString(36).slice(2,9); }
+function ceil2(x){ return Math.ceil(x*100)/100; }
+
+/* ============================= ENGINE =============================
+   3 modes: v22 (V2.2), v4 (V4.0), v3 (V3.0)
+   모든 모드가 이동평균법(국내 증권사 평단가 계산 방식)으로 보유수량/평단/실현손익을 계산.
+====================================================================== */
+function computeEngine(){
+  if(!S.setup) return null;
+  const st = S.setup;
+  const a = st.divisions;
+  const B = st.stock === 'SOXL' ? 20 : 15;
+  const base1Round = st.principal / a; // fixed, never changes
+  const limitPct = st.limitPct;
+  const trades = S.trades.slice().sort((x,y)=>x.ts-y.ts);
+
+  // ---- moving-average (이동평균법) accounting for holdings/평단/실현손익 ----
+  // 국내 증권사 평단가는 보유수량이 남아있는 한 매도로는 평단이 변하지 않고, 매수 시에만
+  // (기존 평단×기존수량 + 신규매수금액) ÷ (기존수량+신규수량) 으로 재계산되는 이동평균법을 씀.
+  // 기존 FIFO(선입선출) 방식은 매도 때마다 가장 오래된(저가) 수량부터 소진시켜 평단이
+  // 실제보다 낮게 재계산되는 차이가 있어, 증권사 표시값과 맞도록 이동평균법으로 변경.
+  let holdQty = 0;
+  let avgCost = 0;
+  let realizedPnL = 0;
+  let totalBuyAmt = 0, totalSellAmt = 0;
+  let cycleBuyAmt = 0; // resets when holdings hit 0 (new cycle)
+  let profitPool = 0;      // unused compounding profit (V3)
+  let maxRoundAmount = base1Round; // V3 high-water 1회매수금
+  let currentRoundAmount = base1Round; // variable 1회매수금 used for V2.2/V4 order sizing & fraction calc
+  let T = 0;
+  let cycleCount = 0;
+  let mode2_2Note = '';
+  let tradePnl = {}; // per-sell realized P&L, keyed by trade id
+
+  function remainingCash(){
+    // cash still available toward this cycle's target = principal - net invested (buy-sell) - ... simplistic per-cycle
+    const netInvested = cycleBuyAmt - (totalSellAmt - sellAmtAtCycleStart);
+    return Math.max(st.principal - netInvested, 0);
+  }
+  let sellAmtAtCycleStart = 0;
+  let cycles = [];
+  let cur = { startTs:null, buyAmt:0, sellAmt:0, fee:0, buyCount:0, sellCount:0, pnl:0 };
+
+  for(const tr of trades){
+    if(tr.type==='buy'){
+      const fee = tr.fee||0;
+      const amt = tr.price*tr.qty + fee;
+      const newQty = holdQty + tr.qty;
+      avgCost = newQty>0 ? (avgCost*holdQty + amt) / newQty : 0;
+      holdQty = newQty;
+      totalBuyAmt += amt;
+      cycleBuyAmt += amt;
+      if(cur.startTs===null) cur.startTs = tr.ts;
+      cur.buyAmt += amt; cur.fee += fee; cur.buyCount++;
+
+      if(st.mode==='v4'){
+        const denom = Math.max(a - T, 0.0001);
+        currentRoundAmount = remainingCash()>0 ? remainingCash()/denom : base1Round;
+        let frac = currentRoundAmount>0 ? Math.min(amt/currentRoundAmount, 1.2) : 1;
+        if(tr.flags && tr.flags.postSellDrop){ T = T*0.25 + frac; }
+        else { T = T + frac; }
+      } else if(st.mode==='v22'){
+        // T derived from net invested amount vs fixed base (recomputed after loop for simplicity)
+      } else if(st.mode==='v3'){
+        currentRoundAmount = maxRoundAmount; // order sizing uses compounding amount
+        T = ceil2(cycleBuyAmt / base1Round);
+      }
+    } else { // sell
+      const sellFee = tr.fee||0;
+      const proceeds = tr.price*tr.qty - sellFee;
+      const costOfSold = avgCost * tr.qty; // 이동평균법: 매도해도 평단(avgCost)은 그대로 유지
+      const pnl = proceeds - costOfSold;
+      realizedPnL += pnl;
+      tradePnl[tr.id] = pnl;
+      totalSellAmt += proceeds;
+      if(cur.startTs===null) cur.startTs = tr.ts;
+      cur.sellAmt += proceeds; cur.fee += sellFee; cur.sellCount++; cur.pnl += pnl;
+      holdQty = Math.max(holdQty - tr.qty, 0);
+
+      if(st.mode==='v4'){
+        if(tr.flags && tr.flags.quarterSell){ T = T*0.75; }
+      } else if(st.mode==='v3'){
+        if(pnl>0) profitPool += pnl/40;
+        maxRoundAmount = Math.max(maxRoundAmount, base1Round + profitPool);
+        currentRoundAmount = maxRoundAmount;
+      }
+
+      if(holdQty<=0.00001){
+        // cycle end — record settlement
+        holdQty = 0; avgCost = 0;
+        cycleCount++;
+        cycles.push({
+          stock:st.stock, mode:st.mode, seed:st.principal, divisions:a, base1Round,
+          startTs:cur.startTs, endTs:tr.ts,
+          buyAmt:cur.buyAmt, sellAmt:cur.sellAmt, fee:cur.fee,
+          buyCount:cur.buyCount, sellCount:cur.sellCount, pnl:cur.pnl
+        });
+        cur = { startTs:null, buyAmt:0, sellAmt:0, fee:0, buyCount:0, sellCount:0, pnl:0 };
+        cycleBuyAmt = 0; sellAmtAtCycleStart = totalSellAmt; T=0;
+        if(st.mode==='v3'){
+          if(realizedPnL>0) profitPool += realizedPnL/40; // apply remaining cycle-end profit too (best-effort)
+          maxRoundAmount = Math.max(maxRoundAmount, base1Round + profitPool);
+        }
+      }
+    }
+  }
+
+  const holdingQty = holdQty;
+  const avgPrice = avgCost;
+
+  // 시드소진율: 매도로 회수된 금액(현재 사이클분)은 누적매수액에서 차감한 순매수액 기준
+  const netInvested = Math.max(cycleBuyAmt - (totalSellAmt - sellAmtAtCycleStart), 0);
+
+  // 진행회차(T)는 시드소진율(순매수÷원금)과 항상 정비례해야 함: 소진율이 100%를 넘지 않는 구간에서는
+  // 모드에 관계없이 순매수액 기준으로 T를 다시 계산 (기존의 분할누적 방식 대신 사용)
+  if(st.principal>0 && netInvested <= st.principal){
+    T = base1Round>0 ? netInvested/base1Round : 0;
+    const denom = Math.max(a - T, 0.0001);
+    currentRoundAmount = remainingCash()>0 ? remainingCash()/denom : base1Round;
+  } else if(st.mode==='v22'){
+    const denom = Math.max(a - T, 0.0001);
+    currentRoundAmount = remainingCash()>0 ? remainingCash()/denom : base1Round;
+  }
+  if(st.mode==='v3' && holdingQty>0){
+    // recompute current round amount from live profitPool (already tracked)
+    currentRoundAmount = maxRoundAmount;
+  }
+
+  // ---- phase & percent ----
+  let pct, phase, quarterMode=false, reverseMode=false;
+  if(st.mode==='v22'){
+    pct = 10 - (T/2)*(40/a);
+    phase = T < a/2 ? 'front' : (T <= a-1 ? 'back' : 'quarterloss');
+    quarterMode = phase==='quarterloss';
+  } else if(st.mode==='v4' || st.mode==='v3'){
+    pct = B*(1 - 2*T/a);
+    phase = T < a/2 ? 'front' : 'back';
+    if(T > a-1) { quarterMode = true; phase='quarterloss'; }
+    if(st.mode==='v4' && S.reverseModeOn) { reverseMode = true; }
+  }
+
+  const buyLegPrice = holdingQty>0 ? avgPrice*(1+pct/100) - 0.01 : null;
+  const evenPrice = holdingQty>0 ? avgPrice - 0.01 : null; // 0% leg
+  const sellLegPrice = holdingQty>0 ? avgPrice*(1+pct/100) : null;
+  const limitSellPrice = holdingQty>0 ? avgPrice*(1+limitPct/100) : null;
+
+  return {
+    a, B, base1Round, limitPct, holdingQty, avgPrice, realizedPnL, totalBuyAmt, totalSellAmt,
+    T, phase, quarterMode, reverseMode, pct, currentRoundAmount, netInvested, tradePnl,
+    buyLegPrice, evenPrice, sellLegPrice, limitSellPrice, cycleCount, cycles
+  };
+}
+
+/* ============================= REVERSE MODE (V4) helpers ============================= */
+function reverseAvgClose(){
+  const arr = (S.reverseRef.closes||[]).filter(x=>!isNaN(x));
+  if(arr.length===0) return null;
+  const last5 = arr.slice(-5);
+  return last5.reduce((a,b)=>a+b,0)/last5.length;
+}
+
+/* ============================= RENDER ============================= */
+function render(){
+  try{ renderInner(); }
+  catch(err){
+    console.error('render error', err);
+    try{ notify('화면을 그리는 중 오류가 발생했어요:<br><span class="mono" style="font-size:11px;">'+String(err && err.message || err)+'</span>'); }catch(e2){}
+  }
+}
+function renderInner(){
+  const app = document.getElementById('app');
+  const tabbar = document.getElementById('tabbar');
+  if(!S.setup){
+    tabbar.style.display='none';
+    document.getElementById('hdrSub').textContent = '종목을 설정해주세요';
+    app.innerHTML = setupView();
+    return;
+  }
+  tabbar.style.display='block';
+  document.getElementById('hdrStock').textContent = `${S.setup.stock} · ${modeLabel(S.setup.mode)}`;
+  document.getElementById('hdrSub').textContent = `원금 $${fmtInt(S.setup.principal)} · ${S.setup.divisions}분할`;
+  document.querySelectorAll('.tabbar button').forEach(b=>b.classList.toggle('active', b.dataset.tab===currentTab));
+
+  const eng = computeEngine();
+  if(currentTab==='dash'){ app.innerHTML = dashView(eng); }
+  else if(currentTab==='plan') app.innerHTML = planView(eng);
+  else if(currentTab==='add') app.innerHTML = addView(eng);
+  else if(currentTab==='hist') app.innerHTML = histView(eng);
+  else if(currentTab==='settle') app.innerHTML = settleView(eng);
+}
+function setTab(t){ currentTab=t; render(); window.scrollTo(0,0); }
+function modeLabel(m){ return m==='v22'?'V2.2':(m==='v4'?'V4.0':'V3.0'); }
+
+/* ---------- Setup ---------- */
+function setupView(){
+  return `
+  <div class="card">
+    <h2>새 종목 설정</h2>
+    <div class="field">
+      <label>종목</label>
+      <div class="seg" id="segStock">
+        <button data-v="SOXL" class="active" onclick="pickSeg('segStock',this)">SOXL</button>
+        <button data-v="TQQQ" onclick="pickSeg('segStock',this)">TQQQ</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>매수법 버전</label>
+      <div class="seg" id="segMode">
+        <button data-v="v22" class="active" onclick="pickSeg('segMode',this)">V2.2</button>
+        <button data-v="v3" onclick="pickSeg('segMode',this)">V3.0</button>
+        <button data-v="v4" onclick="pickSeg('segMode',this)">V4.0</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>원금 ($)</label>
+      <input type="number" id="inpPrincipal" placeholder="예: 20000" inputmode="decimal">
+    </div>
+    <div class="field">
+      <label>분할수</label>
+      <input type="number" id="inpDivisions" placeholder="예: 40" value="40" inputmode="numeric">
+    </div>
+    <div class="field">
+      <label>지정가매도 %</label>
+      <div class="seg" id="segLimit">
+        <button data-v="10" onclick="pickSeg('segLimit',this)">10%</button>
+        <button data-v="12" onclick="pickSeg('segLimit',this)">12%</button>
+        <button data-v="15" onclick="pickSeg('segLimit',this)">15%</button>
+        <button data-v="20" class="active" onclick="pickSeg('segLimit',this)">20%</button>
+      </div>
+    </div>
+    <button class="btn primary" onclick="createSetup()">시작하기</button>
+    <div class="banner">라오어 무한매수법 V2.2 / V3.0 / V4.0 공식 방법론을 기반으로 계산합니다. 실시간 시세 연동 없이, 직접 입력한 체결 내역만으로 계산됩니다.</div>
+  </div>`;
+}
+function pickSeg(id, el){
+  document.querySelectorAll('#'+id+' button').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+}
+function createSetup(){
+  const stock = document.querySelector('#segStock .active').dataset.v;
+  const mode = document.querySelector('#segMode .active').dataset.v;
+  const limitPct = Number(document.querySelector('#segLimit .active').dataset.v);
+  const principal = Number(document.getElementById('inpPrincipal').value);
+  const divisions = Number(document.getElementById('inpDivisions').value);
+  if(!principal || principal<=0){ notify('원금을 입력해주세요'); return; }
+  if(!divisions || divisions<=1){ notify('분할수를 입력해주세요'); return; }
+  S.setup = { stock, mode, principal, divisions, limitPct };
+  S.trades = [];
+  S.reverseModeOn = false;
+  S.reverseRef = {closes:[], lastClose:null};
+  saveState();
+  currentTab='plan';
+  render();
+}
+function openSettings(){
+  if(!S.setup){ return; }
+  showModal(`
+    <h3>설정</h3>
+    <div class="field"><label>종목</label><div class="v mono">${S.setup.stock}</div></div>
+    <div class="field"><label>버전</label><div class="v mono">${modeLabel(S.setup.mode)}</div></div>
+    <div class="field"><label>원금</label><div class="v mono">$${fmtInt(S.setup.principal)}</div></div>
+    <div class="field"><label>분할수</label><div class="v mono">${S.setup.divisions}</div></div>
+    <div class="field">
+      <label>지정가매도 %</label>
+      <div class="seg" id="segLimit2">
+        ${[10,12,15,20].map(p=>`<button data-v="${p}" class="${p===S.setup.limitPct?'active':''}" onclick="pickSeg('segLimit2',this)">${p}%</button>`).join('')}
+      </div>
+    </div>
+    <button class="btn primary" onclick="saveLimitPct()">저장</button>
+    <div class="divider"></div>
+    <div class="field"><label>동기화 상태</label><div class="v" style="font-size:13px;">${cloudDoc? '☁️ 서버에 자동 백업됨' : '⚠️ 이 기기의 저장공간에만 저장 중 (서버 백업 연결 안 됨)'}</div></div>
+    <button class="btn ghost" onclick="exportBackup()">백업 데이터 내보내기 (복사)</button>
+    <div class="checkline" style="margin-top:14px;"><span>문제가 생겼을 때 아래에 백업 텍스트를 붙여넣고 복원할 수 있어요.</span></div>
+    <textarea id="restoreBox" rows="4" style="width:100%; margin-top:8px; background:var(--bg-elev2); border:1px solid var(--line); color:var(--text); border-radius:10px; padding:10px; font-family:inherit; font-size:16px;" placeholder="백업 텍스트 붙여넣기"></textarea>
+    <button class="btn ghost" style="margin-top:8px;" onclick="importBackup()">이 텍스트로 복원</button>
+    <div class="divider"></div>
+    <button class="btn ghost" id="resetBtn" onclick="handleResetClick()">종목 초기화 (전체 삭제)</button>
+  `);
+}
+/* ---------- Toast + Undo (plain DOM, independent of #app re-renders) ---------- */
+let undoSnapshot = null;
+let undoTimer = null;
+function showToast(msg, onUndo){
+  let el = document.getElementById('toastBar');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'toastBar';
+    el.style.cssText = 'position:fixed; left:12px; right:12px; z-index:9000; bottom:calc(84px + env(safe-area-inset-bottom,0px)); background:var(--bg-elev2); border:1px solid var(--line); color:var(--text); padding:12px 14px; border-radius:12px; display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:13.5px; box-shadow:0 6px 24px rgba(0,0,0,.35);';
+    document.body.appendChild(el);
+  }
+  clearTimeout(undoTimer);
+  el.innerHTML = '';
+  const span = document.createElement('span');
+  span.textContent = msg;
+  el.appendChild(span);
+  if(onUndo){
+    const btn = document.createElement('button');
+    btn.textContent = '되돌리기';
+    btn.style.cssText = 'background:none;border:none;color:var(--accent);font-weight:700;font-size:13.5px;font-family:inherit;flex-shrink:0;';
+    btn.onclick = function(){
+      onUndo();
+      el.remove();
+      clearTimeout(undoTimer);
+    };
+    el.appendChild(btn);
+  }
+  el.style.display = 'flex';
+  undoTimer = setTimeout(()=>{ el.remove(); }, 6000);
+}
+function handleResetClick(){
+  const snapshot = JSON.parse(JSON.stringify(S));
+  try{ sessionStorage.setItem('infbuy_undo_reset', JSON.stringify(snapshot)); }catch(e){}
+  S = { setup:null, trades:[] };
+  saveLocal();
+  if(cloudDoc){ cloudDoc.set(JSON.parse(JSON.stringify(S))).catch(e=>console.warn('cloud save fail', e)); }
+  // force a genuine reload rather than trust an in-page re-render: guarantees the setup screen
+  // actually shows, regardless of anything else going on in this view.
+  location.reload();
+}
+function checkUndoSnapshotAfterReload(){
+  try{
+    const resetRaw = sessionStorage.getItem('infbuy_undo_reset');
+    if(resetRaw){
+      sessionStorage.removeItem('infbuy_undo_reset');
+      const snap = JSON.parse(resetRaw);
+      showToast('종목 설정과 매매기록을 모두 삭제했습니다.', ()=>{
+        S = snap; saveState(); render();
+      });
+      return;
+    }
+    const msg = sessionStorage.getItem('infbuy_toast_after_reload');
+    if(msg){
+      sessionStorage.removeItem('infbuy_toast_after_reload');
+      const undoRaw = sessionStorage.getItem('infbuy_undo_trade');
+      if(undoRaw){
+        sessionStorage.removeItem('infbuy_undo_trade');
+        const removedTrade = JSON.parse(undoRaw);
+        showToast(msg, ()=>{
+          S.trades = [...S.trades, removedTrade];
+          saveState(); render();
+        });
+      } else {
+        showToast(msg);
+      }
+    }
+  }catch(e){ console.warn('post-reload toast restore fail', e); }
+}
+function handleDelClick(id, btnEl){
+  const idx = S.trades.findIndex(t=>t.id===id);
+  if(idx===-1) return;
+  const removed = S.trades[idx];
+  S.trades = S.trades.filter(t=>t.id!==id);
+  saveState();
+  try{
+    sessionStorage.setItem('infbuy_toast_after_reload', '기록 1건을 삭제했습니다.');
+    sessionStorage.setItem('infbuy_undo_trade', JSON.stringify(removed));
+    sessionStorage.setItem('infbuy_tab_after_reload', 'hist');
+  }catch(e){}
+  // force a genuine reload rather than trust an in-page removal/re-render: guarantees the
+  // list actually reflects the deletion, regardless of anything else going on in this view.
+  location.reload();
+}
+function exportBackup(){
+  const text = JSON.stringify(S);
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>notify('클립보드에 복사했습니다. 메모 앱 등에 붙여넣어 보관하세요.')).catch(()=>promptFallback(text));
+  } else { promptFallback(text); }
+}
+function promptFallback(text){
+  showModal(`<h3>백업 데이터</h3><div style="color:var(--text-dim); font-size:13px; margin-bottom:10px;">아래 내용을 전체 선택해서 복사한 뒤 메모 앱 등에 보관하세요.</div><textarea readonly onclick="this.select()" rows="8" style="width:100%; background:var(--bg-elev2); border:1px solid var(--line); color:var(--text); border-radius:10px; padding:10px; font-family:'IBM Plex Mono',monospace; font-size:16px;">${text}</textarea><button class="btn primary" style="margin-top:12px" onclick="closeModal()">닫기</button>`);
+}
+function importBackup(){
+  const raw = document.getElementById('restoreBox').value.trim();
+  if(!raw){ notify('백업 텍스트를 붙여넣어주세요'); return; }
+  try{
+    const parsed = JSON.parse(raw);
+    if(!parsed || typeof parsed!=='object'){ throw new Error('invalid'); }
+    askConfirm('현재 데이터를 백업 내용으로 덮어쓸까요?', ()=>{
+      S = parsed; saveState(); render();
+    });
+  }catch(e){ notify('백업 텍스트를 읽을 수 없습니다. 다시 확인해주세요.'); }
+}
+function saveLimitPct(){
+  S.setup.limitPct = Number(document.querySelector('#segLimit2 .active').dataset.v);
+  saveState(); closeModal(); render();
+}
+/* ============================= PRICE QUOTE (수동입력) ============================= */
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+
+/* ---------- Dashboard ---------- */
+function dashView(e){
+  if(!e) return '';
+  const pnlClass = e.realizedPnL>=0 ? 'down' : 'up'; // down(green)=profit convention here? keep consistent: profit green, loss red
+  const profitClass = e.realizedPnL>=0 ? 'pnl-pos' : 'pnl-neg';
+  const phaseLabel = {front:'전반전', back:'후반전', quarterloss: S.setup.mode==='v22' ? '쿼터손절모드' : '쿼터모드(소진임박)'}[e.phase] || e.phase;
+  let reverseBanner = '';
+  if(S.setup.mode==='v4' && e.quarterMode){
+    reverseBanner = `<div class="banner">T값이 ${e.a-1}을 넘어 소진에 가까워졌습니다. 완전히 소진되면(1개 매수 불가) 설정에서 리버스모드로 전환해주세요.</div>`;
+  }
+  const buyPct = S.setup.principal>0 ? (e.netInvested / S.setup.principal * 100) : 0;
+  return `
+  <div class="card">
+    <h2>진행 현황 · ${modeLabel(S.setup.mode)}</h2>
+    <div class="grid2">
+      <div class="stat"><div class="l">보유수량</div><div class="v mono">${fmtInt(e.holdingQty)}</div></div>
+      <div class="stat"><div class="l">평단</div><div class="v mono">$${fmt(e.avgPrice)}</div></div>
+      <div class="stat"><div class="l">진행회차 (T)</div><div class="v mono">${fmt(e.T,2)}T / ${e.a}</div></div>
+      <div class="stat"><div class="l">단계</div><div class="v">${phaseLabel}</div></div>
+      <div class="stat"><div class="l">누적 매수액</div><div class="v mono">$${fmtInt(e.totalBuyAmt)}</div></div>
+      <div class="stat"><div class="l">전체 금액(원금)</div><div class="v mono">$${fmtInt(S.setup.principal)}</div></div>
+      <div class="stat"><div class="l">누적 매도액</div><div class="v mono">$${fmtInt(e.totalSellAmt)}</div></div>
+      <div class="stat"><div class="l">실현손익</div><div class="v mono ${profitClass}">${e.realizedPnL>=0?'+':''}$${fmt(e.realizedPnL)}</div></div>
+      <div class="stat" style="grid-column:1 / span 2;"><div class="l">완료 사이클</div><div class="v mono">${e.cycleCount}</div></div>
+    </div>
+    <div style="margin-top:14px;">
+      <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-dim); margin-bottom:6px;">
+        <span>시드 소진율 (순매수액 ÷ 원금)</span><span class="mono">${fmt(buyPct,1)}%</span>
+      </div>
+      <div style="background:var(--bg-elev2); border-radius:999px; height:11px; overflow:hidden;">
+        <div style="width:${Math.min(Math.max(buyPct,0),100)}%; background:linear-gradient(90deg,var(--accent),var(--accent2)); height:100%; border-radius:999px;"></div>
+      </div>
+    </div>
+    ${reverseBanner}
+  </div>
+  ${priceCard(e)}
+  ${S.setup.mode==='v4' ? reverseModeCard(e) : ''}
+  <div class="btnrow">
+    <button class="btn buy" onclick="setTab('plan')">매매계획 보기</button>
+    <button class="btn ghost" onclick="setTab('add')">기록 추가</button>
+  </div>`;
+}
+function priceCard(e){
+  const q = S.manualQuote && S.manualQuote.stock===S.setup.stock ? S.manualQuote : null;
+  const stale = q && q.date!==todayStr();
+  let body;
+  if(!q){
+    body = `<div class="empty" style="padding:16px 0;">전일 종가를 자동 불러오거나<br>직접 입력해주세요.</div>`;
+  } else {
+    const unrealized = e.holdingQty>0 ? (q.pc - e.avgPrice) * e.holdingQty : 0;
+    const unrClass = unrealized>=0 ? 'pnl-pos' : 'pnl-neg';
+    const unrPct = (e.holdingQty>0 && e.avgPrice>0) ? (q.pc/e.avgPrice - 1)*100 : 0;
+    const unrPctStr = e.holdingQty>0 ? ` (${unrPct>=0?'+':''}${fmt(unrPct,2)}%)` : '';
+    body = `
+      <div class="grid2">
+        <div class="stat"><div class="l">전일 종가${stale?' (갱신 필요)':''}</div><div class="v mono">$${fmt(q.pc)}</div></div>
+        <div class="stat"><div class="l">평가손익 (보유수량 기준)</div><div class="v mono ${unrClass}">${e.holdingQty>0 ? (unrealized>=0?'+':'')+'$'+fmt(unrealized)+unrPctStr : '—'}</div></div>
+      </div>
+      <div class="checkline"><span>${q.date} 입력 기준 · ${q.source==='api'?'자동':'수동'}</span></div>`;
+  }
+  return `
+  <div class="card">
+    <h2>전일 종가 · 평가손익</h2>
+    ${body}
+    <div class="btnrow" style="margin-top:10px;">
+      <button class="btn ghost" onclick="fetchQuoteFromBackend()" style="flex:1;">자동 새로고침</button>
+      <button class="btn ghost" onclick="openManualQuote()" style="flex:1;">수동 입력</button>
+    </div>
+  </div>`;
+}
+function openManualQuote(){
+  const cur = S.manualQuote && S.manualQuote.stock===S.setup.stock ? S.manualQuote.pc : '';
+  showModal(`
+    <h3>전일 종가 입력</h3>
+    <div class="field"><label>${S.setup.stock} 전일 종가</label><input type="number" id="inpManualPc" inputmode="decimal" step="0.01" value="${cur}" placeholder="예: 23.45"></div>
+    <div class="checkline"><span>증권사 앱이나 네이버페이 증권 등에서 확인한 전일 종가를 입력해주세요.</span></div>
+    <button class="btn primary" style="margin-top:14px;" onclick="saveManualQuote()">저장</button>
+  `);
+}
+function saveManualQuote(){
+  const pc = Number(document.getElementById('inpManualPc').value);
+  if(!pc || pc<=0){ notify('올바른 가격을 입력해주세요'); return; }
+  S.manualQuote = { stock:S.setup.stock, date:todayStr(), pc:pc, source:'manual' };
+  saveState(); closeModal(); render();
+}
+async function fetchQuoteFromBackend(){
+  if(!S.setup.stock){ notify('종목을 먼저 설정해주세요'); return; }
+  try {
+    notify('시세를 불러오는 중...');
+    const response = await fetch(`/api/quote?symbol=${S.setup.stock}`);
+    const data = await response.json();
+    if(data.pc && Number(data.pc) > 0){
+      S.manualQuote = {
+        stock: S.setup.stock,
+        date: todayStr(),
+        pc: Number(data.pc),
+        source: 'api'
+      };
+      saveState();
+      render();
+      notify(`${S.setup.stock} 시세 업데이트: $${fmt(data.pc)}`);
+    } else {
+      notify('시세를 가져올 수 없습니다');
+    }
+  } catch(error){
+    notify('시세 조회 실패. 수동 입력을 사용해주세요.');
+    console.error('API error:', error);
+  }
+}
+function reverseModeCard(e){
+  return `
+  <div class="card">
+    <h2>리버스모드 (소진 후)</h2>
+    <div class="checkline">
+      <input type="checkbox" id="chkReverse" ${S.reverseModeOn?'checked':''} onchange="toggleReverse(this.checked)">
+      <label for="chkReverse">리버스모드 활성화 (소진 발생 시 체크)</label>
+    </div>
+  </div>`;
+}
+function toggleReverse(v){ S.reverseModeOn = v; saveState(); render(); }
+
+/* ---------- Plan ---------- */
+function planView(e){
+  if(!e) return '';
+  if(e.holdingQty<=0){
+    return `<div class="card"><h2>매매계획</h2><div class="empty">첫 매수를 기록하면<br>매수 계획이 표시됩니다.</div></div>
+    <button class="btn primary" style="margin-top:12px" onclick="setTab('add')">첫 매수 기록하기</button>`;
+  }
+
+  if(S.setup.mode==='v4' && S.reverseModeOn){
+    return reversePlanView(e);
+  }
+
+  let buyRows = '';
+  if(!e.quarterMode){
+    if(e.phase==='front'){
+      const half = e.currentRoundAmount/2;
+      const qtyStar = e.buyLegPrice>0 ? Math.floor(half/e.buyLegPrice) : 0;
+      const qtyEven = e.evenPrice>0 ? Math.floor(half/e.evenPrice) : 0;
+      buyRows = `
+        <div class="order-row"><span><span class="tag loc">LOC</span> 별지점 ${fmt(e.pct)}%</span><span class="mono" style="color:var(--buy); font-weight:600;">$${fmt(e.buyLegPrice)} · ${fmtInt(qtyStar)}주</span></div>
+        <div class="order-row"><span><span class="tag loc">LOC</span> 평단(0%)</span><span class="mono" style="color:var(--buy); font-weight:600;">$${fmt(e.evenPrice)} · ${fmtInt(qtyEven)}주</span></div>
+      `;
+    } else {
+      const qtyFull = e.buyLegPrice>0 ? Math.floor(e.currentRoundAmount/e.buyLegPrice) : 0;
+      buyRows = `<div class="order-row"><span><span class="tag loc">LOC</span> 별지점 ${fmt(e.pct)}%</span><span class="mono" style="color:var(--buy); font-weight:600;">$${fmt(e.buyLegPrice)} · ${fmtInt(qtyFull)}주</span></div>`;
+    }
+  } else if(S.setup.mode==='v22'){
+    const qsPrice = e.avgPrice*0.9;
+    const qtyQs = qsPrice>0 ? Math.floor(e.currentRoundAmount/qsPrice) : 0;
+    buyRows = `<div class="order-row"><span><span class="tag loc">LOC</span> 손절모드 (평단 −10%)</span><span class="mono" style="color:var(--buy); font-weight:600;">$${fmt(qsPrice)} · ${fmtInt(qtyQs)}주</span></div>`;
+  } else {
+    buyRows = `<div class="empty" style="padding:14px 0">쿼터매도 하는 날은 매수하지 않습니다.</div>`;
+  }
+
+  const quarterQty = Math.round(e.holdingQty/4);
+  const limitQty = Math.floor(e.holdingQty*3/4);
+  const quarterSellPrice = e.quarterMode ? '시장가(MOC)' : `$${fmt(e.sellLegPrice)} <span class="tag loc" style="margin-left:6px">LOC</span>`;
+
+  return `
+  <div class="card">
+    <h2>다음 매수 계획 ${e.quarterMode && S.setup.mode!=='v22' ? '— 쿼터모드' : ''}</h2>
+    ${buyRows}
+    <div class="banner">1회 매수 시도액 ≈ $${fmtInt(e.currentRoundAmount)} (전반전은 절반씩, 후반전은 전액을 위 가격에 시도 · 수량은 초과하지 않도록 내림)</div>
+  </div>
+  <div class="card">
+    <h2>다음 매도 계획 (쿼터매도)</h2>
+    <div class="order-row"><span><span class="tag ${e.quarterMode?'moc':'loc'}">${e.quarterMode?'MOC':'LOC'}</span> 보유수량의 1/4</span><span class="mono" style="color:var(--sell); font-weight:600;">${e.quarterMode?'무조건매도':'$'+fmt(e.sellLegPrice)} · ${fmtInt(quarterQty)}주</span></div>
+    <div class="order-row"><span><span class="tag limit">지정가</span> 보유수량의 3/4 (+${e.limitPct}%)</span><span class="mono" style="color:var(--sell); font-weight:600;">$${fmt(e.limitSellPrice)} · ${fmtInt(limitQty)}주</span></div>
+    <div class="banner">쿼터매도 수량: ${fmtInt(quarterQty)}주 (반올림) · 지정가매도 수량: ${fmtInt(limitQty)}주 (내림)</div>
+  </div>`;
+}
+function reversePlanView(e){
+  const avg5 = reverseAvgClose();
+  const half = Math.floor(e.holdingQty / Math.floor(e.a/2)) ;
+  return `
+  <div class="card">
+    <h2>리버스모드 — 최근 5거래일 종가</h2>
+    <div class="field"><label>종가 입력 (쉼표로 구분, 최근순 최대 5개)</label>
+      <input type="text" id="inpCloses" placeholder="예: 41.2, 40.1, 39.8, 38.9, 37.5" value="${(S.reverseRef.closes||[]).join(', ')}">
+    </div>
+    <button class="btn ghost" onclick="saveCloses()">저장</button>
+    ${avg5 ? `<div class="stat" style="margin-top:12px"><div class="l">별지점 (5일 평균종가)</div><div class="v mono">$${fmt(avg5)}</div></div>` : ''}
+  </div>
+  <div class="card">
+    <h2>리버스 매도 계획</h2>
+    <div class="banner">첫날: 보유수량을 ${Math.floor(e.a/2)}등분(내림)해서 시장가(MOC)로 무조건 매도. 둘째 날부터는 직전 보유수량 기준 ${Math.floor(e.a/2)}등분해서 별지점(5일 평균종가) 이상에 LOC 매도.</div>
+    ${avg5 ? `<div class="order-row"><span><span class="tag loc">LOC</span> 별지점 매도</span><span class="mono" style="color:var(--sell); font-weight:600;">$${fmt(avg5)} · ${fmtInt(half)}주</span></div>` : ''}
+  </div>
+  <div class="card">
+    <h2>리버스 매수 계획 (쿼터매수)</h2>
+    <div class="banner">잔금의 1/4을 별지점(5일 평균종가) 아래에서 LOC 매수 시도. 1개도 매수 불가능해지면, 다시 첫날처럼 등분 시장가 매도로 리셋합니다.</div>
+  </div>
+  <div class="card">
+    <h2>리버스모드 종료 확인</h2>
+    <div class="field"><label>현재 종가</label><input type="number" id="inpCurClose" placeholder="현재가 입력"></div>
+    <button class="btn ghost" onclick="checkReverseExit(${e.avgPrice}, ${e.B})">종료 조건 확인</button>
+    <div id="reverseExitResult"></div>
+  </div>`;
+}
+function saveCloses(){
+  const raw = document.getElementById('inpCloses').value;
+  const arr = raw.split(',').map(s=>Number(s.trim())).filter(n=>!isNaN(n));
+  S.reverseRef.closes = arr.slice(-5);
+  saveState(); render();
+}
+function checkReverseExit(avgPrice, B){
+  const cur = Number(document.getElementById('inpCurClose').value);
+  const box = document.getElementById('reverseExitResult');
+  if(!cur){ box.innerHTML=''; return; }
+  const diffPct = (cur/avgPrice - 1)*100;
+  const ok = diffPct > -B;
+  box.innerHTML = `<div class="banner" style="margin-top:12px; ${ok?'':'opacity:0.85'}">현재가는 평단 대비 ${fmt(diffPct)}% (${ok? '기준 −'+B+'% 회복 → 일반모드로 복귀 가능' : '기준 −'+B+'%를 아직 회복하지 못함 → 리버스모드 유지'} )</div>`;
+}
+
+/* ---------- Add trade ---------- */
+function fmtDateLabel(v){
+  if(!v) return '날짜 선택';
+  const d = new Date(v+'T00:00:00');
+  if(isNaN(d)) return v;
+  return `${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}.`;
+}
+function dateSelectHtml(prefix, isoDate){
+  const val = isoDate || new Date().toISOString().slice(0,10);
+  return `<div style="width:100%; overflow:hidden; border-radius:10px;">
+    <input type="date" id="${prefix}Date" value="${val}" style="width:100%; box-sizing:border-box; -webkit-appearance:none; appearance:none; background:var(--bg-elev2); border:1px solid var(--line); color:var(--text); padding:11px 12px; border-radius:10px; font-size:16px; font-family:inherit; display:block;">
+  </div>`;
+}
+function getDateSelectValue(prefix){
+  return document.getElementById(prefix+'Date').value;
+}
+function addView(e){
+  const today = new Date().toISOString().slice(0,10);
+  const avgPrice = e ? e.avgPrice : 0;
+  const buyCard = `
+  <div class="card">
+    <h2>매수 기록</h2>
+    <div class="field">
+      <label>날짜</label>
+      ${dateSelectHtml('buy', today)}
+    </div>
+    <div class="field"><label>체결단가</label><input type="number" id="buyPrice" placeholder="$" inputmode="decimal" oninput="updateBuyPreview()"></div>
+    <div class="field"><label>수량</label><input type="number" id="buyQty" placeholder="주" inputmode="numeric" step="1" oninput="updateBuyPreview()"></div>
+    <div class="field"><label>매수 수수료</label><input type="number" id="buyFee" placeholder="$0" inputmode="decimal" value="0" oninput="updateBuyPreview()"></div>
+    <div class="settlebox"><span class="l">매수 정산금액</span><span class="v mono" id="buySettle">$0.00</span></div>
+    ${S.setup.mode==='v4' ? `<div class="checkline"><input type="checkbox" id="buyFlagDrop"><label for="buyFlagDrop">지정가매도 직후 하락해서 발생한 매수</label></div>` : ''}
+    <button class="btn buy" style="margin-top:12px" onclick="submitBuy()">매수 기록 추가</button>
+  </div>`;
+  const sellCard = `
+  <div class="card">
+    <h2>매도 기록</h2>
+    <div class="field">
+      <label>날짜</label>
+      ${dateSelectHtml('sell', today)}
+    </div>
+    <div class="field"><label>체결단가</label><input type="number" id="sellPrice" placeholder="$" inputmode="decimal" oninput="updateSellPreview(${avgPrice})"></div>
+    <div class="field"><label>수량</label><input type="number" id="sellQty" placeholder="주" inputmode="numeric" step="1" oninput="updateSellPreview(${avgPrice})"></div>
+    <div class="field"><label>매도 수수료</label><input type="number" id="sellFee" placeholder="$0" inputmode="decimal" value="0" oninput="updateSellPreview(${avgPrice})"></div>
+    <div class="settlebox"><span class="l">매도 정산금액</span><span class="v mono" id="sellSettle">$0.00</span></div>
+    <div class="settlebox"><span class="l">예상 실현손익 (현재 평단 $${fmt(avgPrice)} 대비)</span><span class="v mono" id="sellPnl">$0.00</span></div>
+    ${(S.setup.mode==='v4') ? `<div class="field"><label>종류</label>
+      <div class="seg" id="segSellKind">
+        <button data-v="quarter" class="active" onclick="pickSeg('segSellKind',this)">쿼터매도(1/4)</button>
+        <button data-v="limit" onclick="pickSeg('segSellKind',this)">지정가매도(3/4)</button>
+      </div></div>` : ''}
+    <button class="btn sell" style="margin-top:12px" onclick="submitSell(${avgPrice})">매도 기록 추가</button>
+  </div>`;
+  return `
+  <div class="seg">
+    <button class="${addKind==='buy'?'active':''}" onclick="setAddKind('buy')">매수</button>
+    <button class="${addKind==='sell'?'active':''}" onclick="setAddKind('sell')">매도</button>
+  </div>
+  ${addKind==='buy' ? buyCard : sellCard}`;
+}
+function updateBuyPreview(){
+  const price = Number(document.getElementById('buyPrice').value)||0;
+  const qty = Number(document.getElementById('buyQty').value)||0;
+  const fee = Number(document.getElementById('buyFee').value)||0;
+  document.getElementById('buySettle').textContent = '$'+fmt(price*qty+fee);
+}
+function updateSellPreview(avgPrice){
+  const price = Number(document.getElementById('sellPrice').value)||0;
+  const qty = Number(document.getElementById('sellQty').value)||0;
+  const fee = Number(document.getElementById('sellFee').value)||0;
+  document.getElementById('sellSettle').textContent = '$'+fmt(price*qty-fee);
+  const pnl = (price-avgPrice)*qty - fee;
+  const el = document.getElementById('sellPnl');
+  el.textContent = (pnl>=0?'+':'')+'$'+fmt(pnl);
+  el.className = 'v mono '+(pnl>=0?'down':'up');
+}
+function submitBuy(){
+  const date = getDateSelectValue('buy');
+  const price = Number(document.getElementById('buyPrice').value);
+  const qty = Math.round(Number(document.getElementById('buyQty').value));
+  const fee = Number(document.getElementById('buyFee').value)||0;
+  if(!price||!qty){ notify('가격과 수량을 입력해주세요'); return; }
+  const flags = {};
+  if(S.setup.mode==='v4'){ flags.postSellDrop = document.getElementById('buyFlagDrop').checked; }
+  S.trades = [...S.trades, { id:uid(), ts:new Date(date).getTime()+Math.random(), type:'buy', price, qty, fee, flags }];
+  saveState(); currentTab='plan'; render();
+}
+function submitSell(){
+  const date = getDateSelectValue('sell');
+  const price = Number(document.getElementById('sellPrice').value);
+  const qty = Math.round(Number(document.getElementById('sellQty').value));
+  const fee = Number(document.getElementById('sellFee').value)||0;
+  if(!price||!qty){ notify('가격과 수량을 입력해주세요'); return; }
+  const flags = {};
+  if(S.setup.mode==='v4'){
+    flags.quarterSell = document.querySelector('#segSellKind .active').dataset.v === 'quarter';
+  }
+  S.trades = [...S.trades, { id:uid(), ts:new Date(date).getTime()+Math.random(), type:'sell', price, qty, fee, flags }];
+  saveState(); currentTab='plan'; render();
+}
+
+/* ---------- History ---------- */
+function histView(e){
+  if(S.trades.length===0){
+    return `<div class="card"><h2>매매이력</h2><div class="empty">기록이 없습니다.</div></div>`;
+  }
+  const rows = S.trades.slice().sort((a,b)=>b.ts-a.ts).map(tr=>{
+    const d = new Date(tr.ts).toISOString().slice(0,10);
+    const kind = tr.type==='buy' ? '매수' : '매도';
+    const flagTxt = tr.flags && tr.flags.postSellDrop ? ' · 지정가매도 후 하락매수' : (tr.flags && tr.flags.quarterSell!==undefined ? (tr.flags.quarterSell?' · 쿼터매도':' · 지정가매도') : '');
+    let pnlTxt = '';
+    if(tr.type==='sell'){
+      const pnl = e && e.tradePnl ? e.tradePnl[tr.id] : undefined;
+      if(pnl!==undefined){
+        const pnlColor = pnl>=0 ? 'var(--up)' : 'var(--sell)'; // 수익실현=빨강, 손실실현=파랑
+        pnlTxt = ` <span class="mono" style="font-weight:600; color:${pnlColor};">(${pnl>=0?'+':''}$${fmt(pnl)})</span>`;
+      }
+    }
+    return `<div class="trade-item" data-trade-id="${tr.id}">
+      <div>
+        <div class="titleline" style="font-weight:600"><span class="tag ${tr.type}">${kind}</span> · $${fmt(tr.price)} × ${fmtInt(tr.qty)}주${pnlTxt}</div>
+        <div class="metaline meta">${d}${flagTxt}</div>
+      </div>
+      <div style="display:flex; gap:4px; flex-shrink:0;">
+        <button class="del" style="color:var(--accent);" onclick="openEditTrade('${tr.id}')">수정</button>
+        <button class="del" onclick="handleDelClick('${tr.id}', this)">삭제</button>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="card"><h2>매매이력 (${S.trades.length}건)</h2>${rows}</div>`;
+}
+function openEditTrade(id){
+  const tr = S.trades.find(t=>t.id===id);
+  if(!tr) return;
+  const dateVal = new Date(tr.ts).toISOString().slice(0,10);
+  const isBuy = tr.type==='buy';
+  let flagsHtml = '';
+  if(S.setup.mode==='v4' && isBuy){
+    flagsHtml = `<div class="checkline"><input type="checkbox" id="editFlagDrop" ${tr.flags&&tr.flags.postSellDrop?'checked':''}><label for="editFlagDrop">지정가매도 직후 하락해서 발생한 매수</label></div>`;
+  } else if(S.setup.mode==='v4' && !isBuy){
+    flagsHtml = `<div class="field"><label>종류</label>
+      <div class="seg" id="editSegSellKind">
+        <button data-v="quarter" class="${(tr.flags&&tr.flags.quarterSell)?'active':''}" onclick="pickSeg('editSegSellKind',this)">쿼터매도(1/4)</button>
+        <button data-v="limit" class="${(tr.flags&&!tr.flags.quarterSell)?'active':''}" onclick="pickSeg('editSegSellKind',this)">지정가매도(3/4)</button>
+      </div></div>`;
+  }
+  showModal(`
+    <h3>${isBuy?'매수':'매도'} 기록 수정</h3>
+    <div class="field">
+      <label>날짜</label>
+      ${dateSelectHtml('edit', dateVal)}
+    </div>
+    <div class="field"><label>체결단가</label><input type="number" id="editPrice" value="${tr.price}" inputmode="decimal"></div>
+    <div class="field"><label>수량</label><input type="number" id="editQty" value="${Math.round(tr.qty)}" inputmode="numeric" step="1"></div>
+    <div class="field"><label>수수료</label><input type="number" id="editFee" value="${tr.fee||0}" inputmode="decimal"></div>
+    ${flagsHtml}
+    <button class="btn ${isBuy?'buy':'sell'}" onclick="saveEditTrade('${id}')">저장</button>
+  `);
+}
+function saveEditTrade(id){
+ try{
+  const tr = S.trades.find(t=>t.id===id);
+  if(!tr){ showBootError('수정 오류: 해당 기록을 찾을 수 없음 (id='+id+')'); return; }
+  const date = getDateSelectValue('edit');
+  const price = Number(document.getElementById('editPrice').value);
+  const qty = Math.round(Number(document.getElementById('editQty').value));
+  const fee = Number(document.getElementById('editFee').value)||0;
+  if(!price||!qty){ notify('가격과 수량을 입력해주세요'); return; }
+  if(!date){ notify('날짜를 선택해주세요'); return; }
+  tr.price = price; tr.qty = qty; tr.fee = fee;
+  const fracTie = tr.ts - Math.floor(tr.ts);
+  tr.ts = new Date(date+'T00:00:00Z').getTime() + fracTie;
+  if(S.setup.mode==='v4'){
+    if(tr.type==='buy'){
+      tr.flags = tr.flags || {};
+      tr.flags.postSellDrop = document.getElementById('editFlagDrop').checked;
+    } else {
+      tr.flags = tr.flags || {};
+      tr.flags.quarterSell = document.querySelector('#editSegSellKind .active').dataset.v === 'quarter';
+    }
+  }
+  saveState();
+  try{ sessionStorage.setItem('infbuy_toast_after_reload', '기록을 수정했습니다.'); }catch(e){}
+  currentTab = 'hist';
+  try{ sessionStorage.setItem('infbuy_tab_after_reload', 'hist'); }catch(e){}
+  // force a genuine reload rather than trust an in-page patch/re-render: guarantees the
+  // updated values actually show, regardless of anything else going on in this view.
+  location.reload();
+ }catch(err){
+   console.error('saveEditTrade error', err);
+   showBootError('수정 저장 오류: '+(err && err.message ? err.message : err));
+ }
+}
+
+/* ---------- Settlement history ---------- */
+function daysBetween(t1,t2){ return Math.max(1, Math.round((t2-t1)/86400000)); }
+function dstr(ts){ const d=new Date(ts); return `${String(d.getFullYear()).slice(2)}.${d.getMonth()+1}.${d.getDate()}`; }
+function settleView(e){
+  if(!e || !e.cycles || e.cycles.length===0){
+    return `<div class="card"><h2>정산이력</h2><div class="empty">완료된(보유수량 0으로 종료된)<br>사이클이 아직 없습니다.</div></div>`;
+  }
+  const cycles = e.cycles.slice().reverse();
+  const totalPnl = e.cycles.reduce((s,c)=>s+c.pnl,0);
+  const totalFee = e.cycles.reduce((s,c)=>s+c.fee,0);
+  const pnlClass = totalPnl>=0 ? 'down' : 'up';
+  const cards = cycles.map(c=>{
+    const netInvestedC = Math.max(c.buyAmt - c.sellAmt, 0);
+    const seedUsedPct = c.seed>0 ? (netInvestedC/c.seed*100) : 0;
+    const cPnlClass = c.pnl>=0 ? 'down':'up';
+    const tCycle = c.base1Round>0 ? (netInvestedC/c.base1Round) : 0;
+    const tStat = seedUsedPct<=100
+      ? `<div class="stat"><div class="l">진행회차 (T)</div><div class="v mono">${fmt(tCycle,2)}T / ${c.divisions}</div></div>`
+      : '';
+    return `
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div>
+          <div style="font-weight:700; font-size:16px;">${c.stock} <span style="font-size:11.5px; font-weight:600; color:var(--accent); background:var(--accent-soft); padding:2px 7px; border-radius:6px; margin-left:4px;">${modeLabel(c.mode)}</span></div>
+          <div class="meta" style="margin-top:3px;">${dstr(c.startTs)} ~ ${dstr(c.endTs)}</div>
+        </div>
+        <div class="mono ${cPnlClass}" style="font-size:19px; font-weight:700;">${c.pnl>=0?'+':''}$${fmt(c.pnl)}</div>
+      </div>
+      <div class="divider"></div>
+      <div class="grid2">
+        <div class="stat"><div class="l">시드</div><div class="v mono">$${fmtInt(c.seed)}</div></div>
+        <div class="stat"><div class="l">누적매수금</div><div class="v mono">$${fmt(c.buyAmt)}</div></div>
+        <div class="stat"><div class="l">분할수</div><div class="v mono">${c.divisions}회</div></div>
+        <div class="stat"><div class="l">누적매도금</div><div class="v mono">$${fmt(c.sellAmt)}</div></div>
+        <div class="stat"><div class="l">1회 매수금</div><div class="v mono">$${fmtInt(c.base1Round)}</div></div>
+        <div class="stat"><div class="l">매매수수료</div><div class="v mono">$${fmt(c.fee)}</div></div>
+        <div class="stat"><div class="l">운용일수</div><div class="v mono">${daysBetween(c.startTs,c.endTs)}일</div></div>
+        <div class="stat"><div class="l">매수/매도 횟수</div><div class="v mono">${c.buyCount}회 / ${c.sellCount}회</div></div>
+        <div class="stat" style="grid-column:1 / span 2;"><div class="l">시드소진율 (순매수 기준)</div><div class="v mono">${fmt(seedUsedPct,2)}%</div></div>
+        ${tStat}
+      </div>
+    </div>`;
+  }).join('');
+  return `
+  <div class="card">
+    <h2>총 정산손익</h2>
+    <div class="mono ${pnlClass}" style="font-size:30px; font-weight:700;">${totalPnl>=0?'+':''}$${fmt(totalPnl)}</div>
+    <div class="grid2" style="margin-top:14px;">
+      <div class="stat"><div class="l">매매수수료 합</div><div class="v mono">$${fmt(totalFee)}</div></div>
+      <div class="stat"><div class="l">정산 사이클 수</div><div class="v mono">${e.cycles.length}개</div></div>
+    </div>
+  </div>
+  ${cards}`;
+}
+
+/* ---------- Modal ---------- */
+function showModal(html){
+  document.getElementById('modalBody').innerHTML = html;
+  document.getElementById('modalBg').classList.add('open');
+}
+function closeModal(){ document.getElementById('modalBg').classList.remove('open'); }
+function notify(msg){
+  showModal(`<h3>안내</h3><div style="color:var(--text-dim); font-size:14px; line-height:1.5; margin-bottom:16px;">${msg}</div><button class="btn primary" onclick="closeModal()">확인</button>`);
+}
+let pendingConfirm = null;
+function askConfirm(msg, action){
+  pendingConfirm = action;
+  showModal(`<h3>확인해주세요</h3><div style="color:var(--text-dim); font-size:14px; line-height:1.5; margin-bottom:16px;">${msg}</div><div class="btnrow"><button class="btn ghost" onclick="closeModal()">취소</button><button class="btn sell" onclick="runPendingConfirm()">삭제</button></div>`);
+}
+function runPendingConfirm(){
+  const fn = pendingConfirm; pendingConfirm = null;
+  closeModal();
+  if(fn){
+    try{ fn(); }
+    catch(err){
+      console.error('confirm action error', err);
+      notify('작업 중 오류가 발생했어요:<br><span class="mono" style="font-size:11px;">'+String(err && err.message || err)+'</span>');
+    }
+  }
+}
+
+/* ---------- init ---------- */
+render();
+initCloud();
+checkUndoSnapshotAfterReload();
+</script>
+</body>
+</html>

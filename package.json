@@ -1,0 +1,9 @@
+{
+  "name": "infinite-buying-tracker",
+  "version": "1.0.0",
+  "description": "라오어 무한매수법 트래커 - Finnhub 시세 자동 조회",
+  "main": "api/quote.js",
+  "dependencies": {
+    "node-fetch": "^2.6.7"
+  }
+}
