@@ -261,6 +261,11 @@ function fmt(n, d=2){
   if(n===null||n===undefined||isNaN(n)) return '—';
   return Number(n).toLocaleString('en-US',{minimumFractionDigits:d, maximumFractionDigits:d});
 }
+// 손익 금액 표기: 부호를 $ 앞에 붙임 → +$40.40 / -$93.20
+function fmtSignedUsd(n){
+  if(n===null||n===undefined||isNaN(n)) return '—';
+  return (n>=0?'+':'-')+'$'+fmt(Math.abs(n));
+}
 function fmtInt(n){ if(n===null||n===undefined||isNaN(n)) return '—'; return Math.round(n).toLocaleString('en-US'); }
 function uid(){ return 't'+Math.random().toString(36).slice(2,9); }
 function ceil2(x){ return Math.ceil(x*100)/100; }
@@ -677,7 +682,7 @@ function dashView(e){
       <div class="stat"><div class="l">누적 매수액</div><div class="v mono">$${fmtInt(e.totalBuyAmt)}</div></div>
       <div class="stat"><div class="l">전체 금액(원금)</div><div class="v mono">$${fmtInt(S.setup.principal)}</div></div>
       <div class="stat"><div class="l">누적 매도액</div><div class="v mono">$${fmtInt(e.totalSellAmt)}</div></div>
-      <div class="stat"><div class="l">실현손익</div><div class="v mono ${profitClass}">${e.realizedPnL>=0?'+':''}$${fmt(e.realizedPnL)}</div></div>
+      <div class="stat"><div class="l">실현손익</div><div class="v mono ${profitClass}">${fmtSignedUsd(e.realizedPnL)}</div></div>
       <div class="stat" style="grid-column:1 / span 2;"><div class="l">완료 사이클</div><div class="v mono">${e.cycleCount}</div></div>
     </div>
     <div style="margin-top:14px;">
@@ -711,7 +716,7 @@ function priceCard(e){
     body = `
       <div class="grid2">
         <div class="stat"><div class="l">전일 종가${stale?' (갱신 필요)':''}</div><div class="v mono">$${fmt(q.pc)}</div></div>
-        <div class="stat"><div class="l">평가손익 (보유수량 기준)</div><div class="v mono ${unrClass}">${e.holdingQty>0 ? (unrealized>=0?'+':'')+'$'+fmt(unrealized)+unrPctStr : '—'}</div></div>
+        <div class="stat"><div class="l">평가손익 (보유수량 기준)</div><div class="v mono ${unrClass}">${e.holdingQty>0 ? fmtSignedUsd(unrealized)+unrPctStr : '—'}</div></div>
       </div>
       <div class="checkline"><span>${q.date} 입력 기준 · ${q.source==='api'?'자동':'수동'}</span></div>`;
   }
@@ -944,8 +949,8 @@ function updateSellPreview(avgPrice){
   document.getElementById('sellSettle').textContent = '$'+fmt(price*qty-fee);
   const pnl = (price-avgPrice)*qty - fee;
   const el = document.getElementById('sellPnl');
-  el.textContent = (pnl>=0?'+':'')+'$'+fmt(pnl);
-  el.className = 'v mono '+(pnl>=0?'down':'up');
+  el.textContent = fmtSignedUsd(pnl);
+  el.className = 'v mono '+(pnl>=0?'pnl-pos':'pnl-neg'); // 수익=빨강, 손실=파랑
 }
 function submitBuy(){
   const date = getDateSelectValue('buy');
@@ -986,7 +991,7 @@ function histView(e){
       const pnl = e && e.tradePnl ? e.tradePnl[tr.id] : undefined;
       if(pnl!==undefined){
         const pnlColor = pnl>=0 ? 'var(--up)' : 'var(--sell)'; // 수익실현=빨강, 손실실현=파랑
-        pnlTxt = ` <span class="mono" style="font-weight:600; color:${pnlColor};">(${pnl>=0?'+':''}$${fmt(pnl)})</span>`;
+        pnlTxt = ` <span class="mono" style="font-weight:600; color:${pnlColor};">(${fmtSignedUsd(pnl)})</span>`;
       }
     }
     return `<div class="trade-item" data-trade-id="${tr.id}">
@@ -1091,7 +1096,7 @@ function settleView(e){
           <div style="font-weight:700; font-size:16px;">${c.stock} <span style="font-size:11.5px; font-weight:600; color:var(--accent); background:var(--accent-soft); padding:2px 7px; border-radius:6px; margin-left:4px;">${modeLabel(c.mode)}</span></div>
           <div class="meta" style="margin-top:3px;">${dstr(c.startTs)} ~ ${dstr(c.endTs)}</div>
         </div>
-        <div class="mono ${cPnlClass}" style="font-size:19px; font-weight:700;">${c.pnl>=0?'+':''}$${fmt(c.pnl)}</div>
+        <div class="mono ${cPnlClass}" style="font-size:19px; font-weight:700;">${fmtSignedUsd(c.pnl)}</div>
       </div>
       <div class="divider"></div>
       <div class="grid2">
@@ -1111,7 +1116,7 @@ function settleView(e){
   return `
   <div class="card">
     <h2>총 정산손익</h2>
-    <div class="mono ${pnlClass}" style="font-size:30px; font-weight:700;">${totalPnl>=0?'+':''}$${fmt(totalPnl)}</div>
+    <div class="mono ${pnlClass}" style="font-size:30px; font-weight:700;">${fmtSignedUsd(totalPnl)}</div>
     <div class="grid2" style="margin-top:14px;">
       <div class="stat"><div class="l">매매수수료 합</div><div class="v mono">$${fmt(totalFee)}</div></div>
       <div class="stat"><div class="l">정산 사이클 수</div><div class="v mono">${e.cycles.length}개</div></div>
